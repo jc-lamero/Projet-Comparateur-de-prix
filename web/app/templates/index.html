@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Comparateur SSD</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; vertical-align: top; }
+    .cheap { font-weight: 700; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #bbb; border-radius:999px; font-size:12px; margin-right: 6px; }
+    .src-darty { background:#f2f7ff; }
+    .src-boulanger { background:#fff6e6; }
+    .src-cdiscount { background:#f6fff2; }
+    .src-test { background:#f5f5f5; }
+  </style>
+</head>
+<body>
+  <h1>Comparateur SSD (Darty / Boulanger / Cdiscount)</h1>
+  <p>Mis à jour : {{ now }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Produit (groupé par nom)</th>
+        <th>Offres</th>
+        <th>Meilleur prix</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in data %}
+      <tr>
+        <td>{{ g["name"] }}</td>
+        <td>
+          {% for p in g["items"] %}
+            <div class="src-{{ p["source"] }}">
+              <span class="pill">{{ p["source"] }}</span>
+              <a href="{{ p["url"] }}" target="_blank" rel="noopener">voir</a>
+              —
+              <span class="{% if p["url"] == g["cheapest"]["url"] %}cheap{% endif %}">
+                {{ "%.2f"|format(p["price_cents"]/100) }} €
+              </span>
+            </div>
+          {% endfor %}
+        </td>
+        <td class="cheap">
+          {{ "%.2f"|format(g["cheapest"]["price_cents"]/100) }} € ({{ g["cheapest"]["source"] }})
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
