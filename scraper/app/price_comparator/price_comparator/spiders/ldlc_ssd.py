@@ -1,68 +1,74 @@
-import re
 import scrapy
+import re
+from urllib.parse import urljoin
 
-SSD_KEYWORDS = ("ssd", "nvme", "m.2", "pcie")
-
-def extract_price_cents(container) -> int | None:
-    # LDLC: "1 499€<sup>95</sup>"
-    euros_txt = container.css("div.price::text").re_first(r"\d[\d\s]*€")
-    if not euros_txt:
-        return None
-    euros = int(re.sub(r"[^\d]", "", euros_txt))
-    sup = container.css("div.price sup::text").get()
-    cents = int(sup.strip()) if sup and sup.strip().isdigit() else 0
-    return euros * 100 + cents
-
-class LdlcSSDSpider(scrapy.Spider):
+class LdlcSsdSpider(scrapy.Spider):
     name = "ldlc_ssd"
     allowed_domains = ["ldlc.com"]
-    start_urls = ["https://www.ldlc.com/informatique/pieces-informatique/disque-ssd/c4698/"]
 
-    custom_settings = {
-        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "DEFAULT_REQUEST_HEADERS": {"Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8"},
-        "DOWNLOAD_DELAY": 1.0,
-        "AUTOTHROTTLE_ENABLED": True,
-    }
+    # Page catégorie SSD LDLC (celle qui marche chez toi)
+    start_urls = [
+        "https://www.ldlc.com/informatique/pieces-informatique/disque-ssd/c4698/"
+    ]
+
+    MAX_PAGES = 5
 
     def parse(self, response):
-        # On part des liens produits (beaucoup plus fiable que "div.price")
+        # --- Extraction produits ---
+        # on prend chaque bloc parent autour d'un lien /fiche/
         for a in response.css('a[href^="/fiche/"]'):
             href = a.attrib.get("href")
             if not href:
                 continue
 
-            # On remonte au premier ancêtre qui contient un prix
-            container = a.xpath("ancestor::*[.//div[contains(@class,'price')]][1]")
-            if not container:
+            block = a.xpath("ancestor::*[self::div or self::li][1]")
+
+            name = (
+                block.css("div.txt span::text").get()
+                or block.css("img::attr(alt)").get()
+                or a.css("::text").get()
+                or ""
+            )
+            name = name.strip()
+
+            # prix: ex "1 499€" + sup "95"
+            euros_txt = block.css("div.price::text").get() or ""
+            euros_txt = euros_txt.replace("\xa0", " ").strip()
+            euros_digits = re.sub(r"[^\d]", "", euros_txt)
+
+            cents_sup = block.css("div.price sup::text").get() or "00"
+            cents_digits = re.sub(r"[^\d]", "", cents_sup).zfill(2)[:2]
+
+            if not euros_digits:
                 continue
 
-            name = container.css("div.txt span::text").get() or container.css("img::attr(alt)").get()
-            if not name:
-                continue
-            name = " ".join(name.split())
+            price_cents = int(euros_digits) * 100 + int(cents_digits)
 
-            # ✅ Filtre SSD sur le nom (élimine les PC)
-            low = name.lower()
-            if not any(k in low for k in SSD_KEYWORDS):
-                continue
-
-            price_cents = extract_price_cents(container)
-            if price_cents is None:
-                continue
-
-            image_url = container.css("div.pic img::attr(src), img::attr(src)").get()
-            url = response.urljoin(href)
+            image_url = block.css("img::attr(src)").get()
+            if image_url and image_url.startswith("//"):
+                image_url = "https:" + image_url
 
             yield {
                 "source": "ldlc",
-                "name": name[:512],
-                "price_cents": int(price_cents),
-                "url": url,
+                "name": name,
+                "price_cents": price_cents,
+                "url": response.urljoin(href),
                 "image_url": image_url,
             }
 
-        # Pagination
-        next_href = response.css('a[rel="next"]::attr(href)').get()
+        # --- Pagination (jusqu'à MAX_PAGES) ---
+        page = response.meta.get("page", 1)
+
+        if page >= self.MAX_PAGES:
+            return
+
+        # LDLC donne souvent un link rel=next (robuste)
+        next_href = (
+            response.css('link[rel="next"]::attr(href)').get()
+            or response.css('a[rel="next"]::attr(href)').get()
+            or response.xpath('//a[contains(., "Suivant")]/@href').get()
+        )
+
         if next_href:
-            yield response.follow(next_href, callback=self.parse)
+            next_url = urljoin(response.url, next_href)
+            yield scrapy.Request(next_url, callback=self.parse, meta={"page": page + 1})
