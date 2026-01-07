@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Meilleurs prix SSD</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; vertical-align: top; }
+    .cheap { font-weight: 700; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #bbb; border-radius:999px; font-size:12px; }
+    .muted { color:#666; font-size:12px; margin-top:4px; }
+    form { display:flex; gap:10px; margin: 10px 0 20px; }
+    input, select { padding:8px; }
+     .src-ldlc { background:#eef7ff; }
+    .src-topachat { background:#f2fff5; }
+    .src-rueducommerce { background:#f8f2ff; }  <!-- 👈 ICI -->
+    .src-materielnet { background:#f8f2ff; }
+
+  </style>
+</head>
+<body>
+  <h1>Meilleurs prix SSD</h1>
+  <p class="muted">Mis à jour : {{ now }}</p>
+
+  <form method="get">
+    <input name="q" placeholder="Recherche (ex: Samsung, 1 To…)" value="{{ q }}">
+    <select name="source">
+      <option value="">Toutes sources</option>
+      <option value="ldlc" {% if source=="ldlc" %}selected{% endif %}>LDLC</option>
+      <option value="topachat" {% if source=="topachat" %}selected{% endif %}>TopAchat</option>
+    </select>
+    <button type="submit">Filtrer</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Produit</th>
+        <th>Site le moins cher</th>
+        <th>Prix min</th>
+        <th>2e prix</th>
+        <th>Écart</th>
+        <th>Lien</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in data %}
+      <tr>
+        <td>
+          {{ g["name"] }}
+          <div class="muted">{{ g["offers_count"] }} offre(s)</div>
+        </td>
+
+        <td><span class="pill">{{ g["cheapest"]["source"] }}</span></td>
+
+        <td class="cheap">{{ "%.2f"|format(g["cheapest"]["price_cents"]/100) }} €</td>
+
+        <td>
+          {% if g["second"] %}
+            {{ "%.2f"|format(g["second"]["price_cents"]/100) }} € ({{ g["second"]["source"] }})
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <td>
+          {% if g["second"] %}
+            <span class="cheap">{{ "%.2f"|format(g["gap_cents"]/100) }} €</span>
+            <span class="muted">({{ "%.1f"|format(g["gap_pct"]) }}%)</span>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <td><a href="{{ g["cheapest"]["url"] }}" target="_blank" rel="noopener">voir</a></td>
+        <td><a href="/product/{{ g['gid'] }}">Détails</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Détails</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; }
+    .cheap { font-weight: 700; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #bbb; border-radius:999px; font-size:12px; }
+    .muted { color:#666; font-size:12px; }
+    .src-ldlc { background:#eef7ff; }
+    .src-topachat { background:#f2fff5; }
+    .src-rueducommerce { background:#f8f2ff; }  
+    .src-materielnet { background:#f8f2ff; }
+
+  </style>
+</head>
+<body>
+  <p><a href="/">← Retour</a></p>
+  <h1>{{ name }}</h1>
+  <p class="muted">Mis à jour : {{ now }}</p>
+
+  {% if not items %}
+    <p>Produit introuvable.</p>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Prix</th>
+          <th>Lien</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in items %}
+        <tr>
+          <td><span class="pill">{{ p["source"] }}</span></td>
+          <td class="{% if cheapest and p['url']==cheapest['url'] %}cheap{% endif %}">
+            {{ "%.2f"|format(p["price_cents"]/100) }} €
+          </td>
+          <td><a href="{{ p["url"] }}" target="_blank" rel="noopener">voir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</body>
+</html>

@@ -6,47 +6,92 @@
   <title>Comparateur SSD</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 20px; }
+    .muted { color:#666; font-size: 14px; }
+    form { display:flex; flex-wrap: wrap; gap:10px; margin: 12px 0 16px; align-items: center; }
+    input, select, button { padding: 8px 10px; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid #ddd; padding: 10px; vertical-align: top; }
-    .cheap { font-weight: 700; }
+    th { text-align: left; }
     .pill { display:inline-block; padding:2px 8px; border:1px solid #bbb; border-radius:999px; font-size:12px; margin-right: 6px; }
-    .src-darty { background:#f2f7ff; }
-    .src-boulanger { background:#fff6e6; }
-    .src-cdiscount { background:#f6fff2; }
-    .src-test { background:#f5f5f5; }
+    .price { font-weight: 700; }
+    .src-ldlc { background:#f2f7ff; padding: 6px 8px; border-radius: 8px; display:inline-block; }
+    .src-topachat { background:#fff6e6; padding: 6px 8px; border-radius: 8px; display:inline-block; }
+    .src-test { background:#f5f5f5; padding: 6px 8px; border-radius: 8px; display:inline-block; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    img { width: 56px; height: 56px; object-fit: contain; background:#fff; border:1px solid #eee; border-radius: 8px; }
   </style>
 </head>
+
 <body>
-  <h1>Comparateur SSD (Darty / Boulanger / Cdiscount)</h1>
-  <p>Mis à jour : {{ now }}</p>
+  <h1>Comparateur SSD (LDLC / TopAchat)</h1>
+  <p class="muted">Astuce : utilise la recherche + filtre source + tri.</p>
+
+  <form method="get">
+    <input name="q" placeholder="Rechercher (ex: 990 PRO, Kingston NV3...)" value="{{ q or '' }}" />
+
+    <select name="source">
+      <option value="">Toutes les sources</option>
+      <option value="ldlc" {{ "selected" if source=="ldlc" else "" }}>LDLC</option>
+      <option value="topachat" {{ "selected" if source=="topachat" else "" }}>TopAchat</option>
+    </select>
+
+    <select name="sort">
+      <option value="price" {{ "selected" if sort=="price" else "" }}>Prix croissant</option>
+      <option value="recent" {{ "selected" if sort=="recent" else "" }}>Plus récent</option>
+    </select>
+
+    <button type="submit">Appliquer</button>
+
+    {% if q or source or sort %}
+      <a href="/" style="margin-left: 8px;">Réinitialiser</a>
+    {% endif %}
+  </form>
 
   <table>
     <thead>
       <tr>
-        <th>Produit (groupé par nom)</th>
-        <th>Offres</th>
-        <th>Meilleur prix</th>
+        <th>Produit</th>
+        <th>Source</th>
+        <th>Prix</th>
+        <th>Lien</th>
+        <th>Scrapé</th>
       </tr>
     </thead>
+
     <tbody>
-      {% for g in data %}
+      {% for p in rows %}
       <tr>
-        <td>{{ g["name"] }}</td>
         <td>
-          {% for p in g["items"] %}
-            <div class="src-{{ p["source"] }}">
-              <span class="pill">{{ p["source"] }}</span>
-              <a href="{{ p["url"] }}" target="_blank" rel="noopener">voir</a>
-              —
-              <span class="{% if p["url"] == g["cheapest"]["url"] %}cheap{% endif %}">
-                {{ "%.2f"|format(p["price_cents"]/100) }} €
-              </span>
+          <div class="row">
+            {% if p.image_url %}
+              <img src="{{ p.image_url }}" alt="image"/>
+            {% endif %}
+            <div>
+              <div><strong>{{ p.name }}</strong></div>
+              <div class="muted">{{ p.url }}</div>
             </div>
-          {% endfor %}
+          </div>
         </td>
-        <td class="cheap">
-          {{ "%.2f"|format(g["cheapest"]["price_cents"]/100) }} € ({{ g["cheapest"]["source"] }})
+
+        <td>
+          <span class="pill src-{{ p.source }}">{{ p.source }}</span>
         </td>
+
+        <td class="price">
+          {{ "%.2f"|format(p.price_cents/100) }} €
+        </td>
+
+        <td>
+          <a href="{{ p.url }}" target="_blank" rel="noopener">voir</a>
+        </td>
+
+        <td class="muted">
+          {{ p.scraped_at }}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="muted">Aucun résultat.</td>
       </tr>
       {% endfor %}
     </tbody>
