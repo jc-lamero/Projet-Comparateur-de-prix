@@ -11,7 +11,7 @@ echo " Petite attente DB (3s)..."
 sleep 3
 
 echo " (Optionnel) nettoyage de la table products"
-# docker compose exec -T db mysql -uapp -papp -D comparateur -e "TRUNCATE TABLE products;"
+ docker compose exec -T db mysql -uapp -papp -D comparateur -e "TRUNCATE TABLE products;"
 
 echo " Scrape LDLC (SSD)..."
 docker compose run --rm scraper bash -lc "cd price_comparator && scrapy crawl ldlc_ssd -L INFO"
